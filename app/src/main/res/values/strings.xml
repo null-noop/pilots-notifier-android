@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Pilots Notifier</string>
+    <string name="settings_title">Settings</string>
+    <string name="section_server">Server Configuration</string>
+    <string name="setting_server_url_title">Remote Server URL</string>
+    <string name="setting_server_url_hint">Remote Server URL</string>
+    <string name="setting_server_status_title">Server Connection Status</string>
+    <string name="status_checking">Checking server status&#8230;</string>
+    <string name="status_online_token_registered">Online • Token Registered</string>
+    <string name="status_online_token_not_registered">Online • Token Not Registered</string>
+    <string name="status_offline">Offline / Unable to connect</string>
+    <string name="section_notifications">Notifications &amp; FCM</string>
+    <string name="setting_fcm_token_title">FCM Registration Token</string>
+    <string name="setting_test_notify_title">Send Test Notification</string>
+    <string name="setting_test_notify_subtitle">Trigger sample flight status notification</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="url_saved">Server URL updated</string>
+    <string name="url_error_empty">URL cannot be empty</string>
+    <string name="token_copied">FCM Token copied &amp; submitted to server</string>
+    <string name="token_registered_success">Token registered on server</string>
+    <string name="token_registered_failed">Failed to register token on server</string>
+    <string name="token_not_ready">FCM Token not available yet</string>
+</resources>

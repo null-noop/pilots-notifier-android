@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme using Material 3 -->
+    <style name="Theme.Pocketpilotsnotif" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand fallbacks (Android 11 and lower before Material You) -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- Secondary brand fallbacks -->
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        <!-- Transparent status bar to support enableEdgeToEdge() -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>
