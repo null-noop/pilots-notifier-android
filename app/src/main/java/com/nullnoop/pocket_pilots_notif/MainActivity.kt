@@ -49,6 +49,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         settingsManager = ServerSettingsManager(this)
+        if (
+            applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
+            intent.getBooleanExtra("use_local_api", false)
+        ) {
+            settingsManager.serverUrl = "http://127.0.0.1:8000"
+        }
 
         // Initialize UI Elements
         val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
@@ -260,8 +266,6 @@ class MainActivity : AppCompatActivity() {
             Log.i(TAG, "Fetched device FCM token")
             tvFcmTokenSubtitle.text = getString(R.string.token_available)
 
-            // Auto-register retrieved token to server
-            registerTokenWithServer(token)
         }
     }
 
