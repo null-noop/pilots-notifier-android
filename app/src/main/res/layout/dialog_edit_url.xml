@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/setting_server_url_hint"
-        app:helperText="e.g. https://localhost:8000"
+        app:helperText="https://pilots-api.nullnoop.dev"
         app:endIconMode="clear_text">
 
         <com.google.android.material.textfield.TextInputEditText

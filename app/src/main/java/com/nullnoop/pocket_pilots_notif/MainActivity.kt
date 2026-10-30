@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvServerUrlSubtitle: TextView
     private lateinit var tvServerStatusSubtitle: TextView
     private lateinit var tvFcmTokenSubtitle: TextView
+    private lateinit var tvPairCodeSubtitle: TextView
 
     private var cachedFcmToken: String? = null
     private var isRegisteringToken = false
@@ -60,9 +61,11 @@ class MainActivity : AppCompatActivity() {
         tvServerUrlSubtitle = findViewById(R.id.tvServerUrlSubtitle)
         tvServerStatusSubtitle = findViewById(R.id.tvServerStatusSubtitle)
         tvFcmTokenSubtitle = findViewById(R.id.tvFcmTokenSubtitle)
+        tvPairCodeSubtitle = findViewById(R.id.tvPairCodeSubtitle)
 
         val cardServerUrl = findViewById<MaterialCardView>(R.id.cardServerUrl)
         val cardServerStatus = findViewById<MaterialCardView>(R.id.cardServerStatus)
+        val cardPairCode = findViewById<MaterialCardView>(R.id.cardPairCode)
         val cardFcmToken = findViewById<MaterialCardView>(R.id.cardFcmToken)
         val cardTestNotify = findViewById<MaterialCardView>(R.id.cardTestNotify)
 
@@ -75,6 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         // Display current server URL setting
         updateServerUrlDisplay()
+        updatePairCodeDisplay()
 
         // Set click listeners
         cardServerUrl.setOnClickListener {
@@ -84,6 +88,17 @@ class MainActivity : AppCompatActivity() {
         cardServerStatus.setOnClickListener {
             Log.d(TAG, "Server Status card clicked by user")
             checkServerStatus()
+        }
+
+        cardPairCode.setOnClickListener {
+            val pairCode = settingsManager.pairCode
+            if (pairCode.isNullOrBlank()) {
+                Toast.makeText(this, R.string.pair_code_not_ready, Toast.LENGTH_SHORT).show()
+            } else {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Pocket Pilots pairing code", formatPairCode(pairCode)))
+                Toast.makeText(this, R.string.pair_code_copied, Toast.LENGTH_SHORT).show()
+            }
         }
 
         cardFcmToken.setOnClickListener {
@@ -115,6 +130,17 @@ class MainActivity : AppCompatActivity() {
         tvServerUrlSubtitle.text = currentUrl
     }
 
+    private fun updatePairCodeDisplay() {
+        val pairCode = settingsManager.pairCode
+        tvPairCodeSubtitle.text = if (pairCode.isNullOrBlank()) {
+            getString(R.string.pair_code_not_ready)
+        } else {
+            formatPairCode(pairCode)
+        }
+    }
+
+    private fun formatPairCode(code: String): String = code.chunked(4).joinToString("-")
+
     private fun checkServerStatus() {
         if (isCheckingStatus) {
             Log.d(TAG, "Server status check already in progress. Skipping.")
@@ -124,14 +150,14 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Initiating server status check for '${settingsManager.serverUrl}'...")
         tvServerStatusSubtitle.text = getString(R.string.status_checking)
         val client = ServerApiClient(settingsManager.serverUrl)
-        client.checkStatus { result ->
+        client.checkStatus(settingsManager.pairCode) { result ->
             isCheckingStatus = false
             result.onSuccess { statusResp ->
                 Log.i(TAG, "Server status check succeeded: $statusResp")
-                if (statusResp.isTokenRegistered) {
-                    tvServerStatusSubtitle.text = getString(R.string.status_online_token_registered)
-                } else {
-                    tvServerStatusSubtitle.text = getString(R.string.status_online_token_not_registered)
+                tvServerStatusSubtitle.text = when (statusResp.isTokenRegistered) {
+                    true -> getString(R.string.status_online_token_registered)
+                    false -> getString(R.string.status_online_token_not_registered)
+                    null -> getString(R.string.status_online)
                 }
             }.onFailure { error ->
                 Log.w(TAG, "Server status check failed for '${settingsManager.serverUrl}': ${error.message}")
@@ -148,9 +174,11 @@ class MainActivity : AppCompatActivity() {
         isRegisteringToken = true
         Log.d(TAG, "Initiating FCM token registration with '${settingsManager.serverUrl}'...")
         val client = ServerApiClient(settingsManager.serverUrl)
-        client.registerToken(token) { result ->
+        client.registerToken(token, settingsManager.deviceId, settingsManager.pairCode) { result ->
             isRegisteringToken = false
-            result.onSuccess {
+            result.onSuccess { registration ->
+                settingsManager.pairCode = registration.pairCode
+                updatePairCodeDisplay()
                 Log.i(TAG, "Successfully registered FCM token at /register-token on '${settingsManager.serverUrl}'")
                 checkServerStatus()
             }.onFailure { error ->
@@ -232,8 +260,8 @@ class MainActivity : AppCompatActivity() {
 
             val token = task.result
             cachedFcmToken = token
-            Log.i(TAG, "Fetched Device FCM Token: $token")
-            tvFcmTokenSubtitle.text = token
+            Log.i(TAG, "Fetched device FCM token")
+            tvFcmTokenSubtitle.text = getString(R.string.token_available)
 
             // Auto-register retrieved token to server
             registerTokenWithServer(token)
