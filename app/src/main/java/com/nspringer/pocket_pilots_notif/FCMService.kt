@@ -21,11 +21,16 @@ class FCMService : FirebaseMessagingService() {
     private val TAG = "FCMService"
 
     override fun onNewToken(token: String) {
-        Log.d(TAG, "New FCM Token generated: $token")
+        Log.d(TAG, "New FCM registration token generated")
 
-        val serverUrl = ServerSettingsManager(this).serverUrl
-        ServerApiClient(serverUrl).registerToken(token) { result ->
-            result.onSuccess {
+        val settings = ServerSettingsManager(this)
+        ServerApiClient(settings.serverUrl).registerToken(
+            token = token,
+            deviceId = settings.deviceId,
+            pairCode = settings.pairCode
+        ) { result ->
+            result.onSuccess { registration ->
+                settings.pairCode = registration.pairCode
                 Log.d(TAG, "Successfully registered token with remote server")
             }.onFailure { e ->
                 Log.e(TAG, "Failed to register token with remote server", e)

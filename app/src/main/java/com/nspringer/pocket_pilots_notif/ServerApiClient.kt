@@ -13,7 +13,12 @@ import java.util.concurrent.Executors
 
 data class ServerStatusResponse(
     val status: String,
-    val isTokenRegistered: Boolean
+    val isTokenRegistered: Boolean?
+)
+
+data class TokenRegistrationResponse(
+    val pairCode: String,
+    val isNewCode: Boolean
 )
 
 class ServerApiClient(private val baseUrl: String) {
@@ -32,8 +37,8 @@ class ServerApiClient(private val baseUrl: String) {
         return "$formattedBase$cleanEndpoint"
     }
 
-    private fun parseTokenRegistered(json: JSONObject): Boolean {
-        val keys = listOf("fcs_token_reg", "fcm_token_reg", "fcs_token_registered", "fcm_token_registered", "token_registered")
+    private fun parseTokenRegistered(json: JSONObject): Boolean? {
+        val keys = listOf("fcm_token_registered", "fcm_token_reg", "token_registered")
         for (key in keys) {
             if (json.has(key) && !json.isNull(key)) {
                 val raw = json.get(key)
@@ -51,10 +56,15 @@ class ServerApiClient(private val baseUrl: String) {
                 }
             }
         }
-        return false
+        return null
     }
 
-    fun registerToken(token: String, callback: ((Result<Boolean>) -> Unit)? = null) {
+    fun registerToken(
+        token: String,
+        deviceId: String,
+        pairCode: String?,
+        callback: ((Result<TokenRegistrationResponse>) -> Unit)? = null
+    ) {
         executor.execute {
             val urlString = formatUrl("/register-token")
             Log.i(TAG, "========================================")
@@ -73,10 +83,11 @@ class ServerApiClient(private val baseUrl: String) {
 
                 val jsonBody = JSONObject().apply {
                     put("token", token)
+                    put("device_id", deviceId)
+                    if (!pairCode.isNullOrBlank()) put("pair_code", pairCode)
                 }
 
                 val bodyStr = jsonBody.toString()
-                Log.d(TAG, "Request Body: $bodyStr")
 
                 OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
                     writer.write(bodyStr)
@@ -88,12 +99,20 @@ class ServerApiClient(private val baseUrl: String) {
                 Log.i(TAG, "<-- HTTP $responseCode $responseMsg ($urlString)")
 
                 val isSuccess = responseCode in 200..299
+                var registration: TokenRegistrationResponse? = null
                 if (isSuccess) {
                     val responseText = try {
                         BufferedReader(InputStreamReader(conn.inputStream, "UTF-8")).use { it.readText() }
                     } catch (_: Exception) { "" }
-                    Log.d(TAG, "Response Body: $responseText")
-                    Log.i(TAG, "Successfully registered FCM token with server!")
+                    val responseJson = JSONObject(responseText)
+                    val pairCode = responseJson.optString("pair_code").trim()
+                    if (pairCode.isNotEmpty()) {
+                        registration = TokenRegistrationResponse(
+                            pairCode = pairCode,
+                            isNewCode = responseJson.optBoolean("is_new_code", false)
+                        )
+                        Log.i(TAG, "Successfully registered FCM token with server")
+                    }
                 } else {
                     val errorText = try {
                         BufferedReader(InputStreamReader(conn.errorStream, "UTF-8")).use { it.readText() }
@@ -104,7 +123,10 @@ class ServerApiClient(private val baseUrl: String) {
                 conn.disconnect()
 
                 mainHandler.post {
-                    callback?.invoke(if (isSuccess) Result.success(true) else Result.failure(Exception("HTTP $responseCode $responseMsg")))
+                    callback?.invoke(
+                        if (isSuccess && registration != null) Result.success(registration)
+                        else Result.failure(Exception("HTTP $responseCode $responseMsg: missing pair_code"))
+                    )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "<-- Exception connecting to $urlString: ${e.message}", e)
@@ -116,7 +138,7 @@ class ServerApiClient(private val baseUrl: String) {
         }
     }
 
-    fun checkStatus(callback: (Result<ServerStatusResponse>) -> Unit) {
+    fun checkStatus(pairCode: String?, callback: (Result<ServerStatusResponse>) -> Unit) {
         executor.execute {
             val urlString = formatUrl("/status")
             Log.i(TAG, "========================================")
@@ -126,6 +148,9 @@ class ServerApiClient(private val baseUrl: String) {
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     setRequestProperty("Accept", "application/json")
+                    pairCode?.takeIf { it.isNotBlank() }?.let {
+                        setRequestProperty("X-Pair-Code", it)
+                    }
                     connectTimeout = 5000
                     readTimeout = 5000
                 }
@@ -136,8 +161,6 @@ class ServerApiClient(private val baseUrl: String) {
 
                 if (responseCode in 200..299) {
                     val responseText = BufferedReader(InputStreamReader(conn.inputStream, "UTF-8")).use { it.readText() }
-                    Log.d(TAG, "Response Body: $responseText")
-
                     val json = JSONObject(responseText)
                     val status = json.optString("status", "ok")
                     val isTokenRegistered = parseTokenRegistered(json)
