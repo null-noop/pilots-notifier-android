@@ -33,20 +33,32 @@ object FlightNotificationRenderer {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val isLanded = stage == 5 || phaseLabel.toString().equals("Landed", ignoreCase = true)
-        val contentText = if (isLanded) "Landed safely" else if (distance > 0) "En Route - $distance nm" else "En Route"
-        val channelId = if (isLanded) CHANNEL_ALERT_ID else CHANNEL_SILENT_ID
+        val isCanceled = phaseLabel.toString().equals("Canceled", ignoreCase = true)
+        val isTerminal = isLanded || isCanceled
+        val contentTitle = if (isCanceled) "$route (Canceled)" else "$route ($arrival)"
+        val contentText = when {
+            isCanceled -> "Trip canceled"
+            isLanded -> "Landed safely"
+            distance > 0 -> "En Route - $distance nm"
+            else -> "En Route"
+        }
+        val channelId = if (isTerminal) CHANNEL_ALERT_ID else CHANNEL_SILENT_ID
 
         val builder = Notification.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_airplane_ticket)
-            .setContentTitle("$route ($arrival)")
+            .setContentTitle(contentTitle)
             .setContentText(contentText)
             .setSubText(phaseLabel)
             .setColorized(true)
-            .setOngoing(!isLanded)
-            .setPriority(if (isLanded) Notification.PRIORITY_HIGH else Notification.PRIORITY_LOW)
+            .setOngoing(!isTerminal)
+            .setPriority(if (isTerminal) Notification.PRIORITY_HIGH else Notification.PRIORITY_LOW)
+
+        if (isCanceled) {
+            builder.setColor(Color.RED)
+        }
 
         if (android.os.Build.VERSION.SDK_INT >= 35) {
-            builder.setStyle(getProgressStyle(context, stage, segments))
+            builder.setStyle(getProgressStyle(context, stage, segments, isCanceled))
         } else {
             builder.setProgress(100, segments.take(stage).sum(), false)
         }
@@ -97,7 +109,12 @@ object FlightNotificationRenderer {
         )
     }
 
-    private fun getProgressStyle(context: Context, stage: Int, segments: List<Int>): Notification.ProgressStyle {
+    private fun getProgressStyle(
+        context: Context,
+        stage: Int,
+        segments: List<Int>,
+        isCanceled: Boolean
+    ): Notification.ProgressStyle {
         val progressStyle = Notification.ProgressStyle()
             .setStyledByProgress(false)
             .setProgressStartIcon(Icon.createWithResource(context, R.drawable.ic_flight_takeoff))
@@ -107,10 +124,12 @@ object FlightNotificationRenderer {
         val clear = Color.TRANSPARENT
         val green = "#4CAF50".toColorInt()
         val yellow = "#FFB300".toColorInt()
+        val red = Color.RED
         progressStyle.setProgress(segments.take(stage).sum())
 
         val segmentList = segments.mapIndexed { index, weight ->
             val color = when {
+                isCanceled && index < stage -> red
                 index < stage - 1 -> blue
                 index == stage - 1 -> if (stage == 5) green else yellow
                 else -> clear
