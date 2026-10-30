@@ -1,8 +1,6 @@
 package com.nullnoop.pocket_pilots_notif
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -16,8 +14,6 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -30,8 +26,6 @@ import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : AppCompatActivity() {
 
-    private val CHANNEL_ID = "flight_status_channel"
-    private val NOTIFICATION_ID = 1001
     private val TAG = "MainActivity"
 
     private lateinit var settingsManager: ServerSettingsManager
@@ -68,6 +62,7 @@ class MainActivity : AppCompatActivity() {
         val cardPairCode = findViewById<MaterialCardView>(R.id.cardPairCode)
         val cardFcmToken = findViewById<MaterialCardView>(R.id.cardFcmToken)
         val cardTestNotify = findViewById<MaterialCardView>(R.id.cardTestNotify)
+        val cardRestoreNotify = findViewById<MaterialCardView>(R.id.cardRestoreNotify)
 
         // 3. Dynamically apply top padding to topAppBar for status bar & camera cutout
         ViewCompat.setOnApplyWindowInsetsListener(topAppBar) { v, insets ->
@@ -111,11 +106,13 @@ class MainActivity : AppCompatActivity() {
             sendTestNotification()
         }
 
+        cardRestoreNotify.setOnClickListener {
+            Log.d(TAG, "Restore Flight Notification card clicked by user")
+            restoreLatestFlightNotification()
+        }
+
         // Request notification permissions for Android 13+
         requestNotificationPermission()
-
-        // Register the Android notification channel
-        createNotificationChannel()
 
         // Fetch FCM Token & Register with Server
         fetchFcmToken()
@@ -268,20 +265,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Flight Tracker Updates",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Live flight tracking notifications"
-            }
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
     private fun sendTestNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -290,17 +273,32 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("SFO ➔ JFK (Arrives 4:15 PM)")
-            .setContentText("En Route — 1,200 nm remaining")
-            .setSubText("✈️ Cruising")
-            .setProgress(100, 60, false)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        FlightNotificationRenderer.showTestSequence(applicationContext)
+    }
 
-        with(NotificationManagerCompat.from(this)) {
-            notify(NOTIFICATION_ID, builder.build())
+    private fun restoreLatestFlightNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationPermission()
+            return
         }
+
+        val notification = LatestFlightNotificationStore.load(applicationContext)
+        if (notification == null) {
+            Toast.makeText(this, R.string.restore_notify_unavailable, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        FlightNotificationRenderer.show(
+            context = applicationContext,
+            route = notification.route,
+            arrival = notification.arrival,
+            distance = notification.distance,
+            phaseLabel = notification.phaseLabel,
+            stage = notification.stage,
+            segments = notification.segments
+        )
+        Toast.makeText(this, R.string.restore_notify_posted, Toast.LENGTH_SHORT).show()
     }
 }

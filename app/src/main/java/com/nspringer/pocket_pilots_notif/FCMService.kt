@@ -1,23 +1,14 @@
 package com.nullnoop.pocket_pilots_notif
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.Icon
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import androidx.core.graphics.toColorInt
 
 class FCMService : FirebaseMessagingService() {
 
-    private val CHANNEL_SILENT_ID = "flight_tracker_silent"
-    private val CHANNEL_ALERT_ID = "flight_tracker_alerts"
     private val TAG = "FCMService"
 
     override fun onNewToken(token: String) {
@@ -60,6 +51,10 @@ class FCMService : FirebaseMessagingService() {
                     ?.takeIf { it.size == 5 }
                     ?: listOf(5, 22, 46, 22, 5) // Default 5-stage allocation fallback
 
+                LatestFlightNotificationStore.save(
+                    this,
+                    FlightNotificationData(route.toString(), arrival, distance, phaseLabel, stage, segments)
+                )
                 sendStyledNotification(route, arrival, distance, phaseLabel, stage, segments)
                 Log.d(TAG, "Notification successfully posted to NotificationManager")
             }
@@ -160,30 +155,6 @@ class FCMService : FirebaseMessagingService() {
         }
     }
 
-    private fun createNotificationChannel() {
-        val silentChannel = NotificationChannel(
-            CHANNEL_SILENT_ID,
-            "Live Flight Progress",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Silent background progress updates while en route"
-            setSound(null, null)
-            enableVibration(false)
-        }
-
-        val alertChannel = NotificationChannel(
-            CHANNEL_ALERT_ID,
-            "Flight Arrival Alerts",
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "Alerts and sound when flight lands"
-        }
-
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(silentChannel)
-        notificationManager.createNotificationChannel(alertChannel)
-    }
-
     private fun sendStyledNotification(
         route: CharSequence,
         arrival: CharSequence,
@@ -192,59 +163,6 @@ class FCMService : FirebaseMessagingService() {
         stage: Int,
         segments: List<Int>
     ) {
-        createNotificationChannel()
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        val isLanded = stage == 5 || phaseLabel.toString().equals("Landed", ignoreCase = true)
-        val contentText = if (isLanded) "Landed safely" else if (distance > 0) "En Route - $distance nm" else "En Route"
-
-        val channelId = if (isLanded) CHANNEL_ALERT_ID else CHANNEL_SILENT_ID
-
-        val builder = Notification.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_airplane_ticket)
-            .setContentTitle("$route ($arrival)")
-            .setContentText(contentText)
-            .setSubText(phaseLabel)
-            .setColorized(true)
-            .setOngoing(!isLanded)
-            .setPriority(if (isLanded) Notification.PRIORITY_HIGH else Notification.PRIORITY_LOW)
-
-        if (android.os.Build.VERSION.SDK_INT >= 35) {
-            builder.setStyle(getProgressStyle(stage, segments))
-        } else {
-            val progressVal = segments.take(stage).sum()
-            builder.setProgress(100, progressVal, false)
-        }
-
-        notificationManager.notify(1001, builder.build())
-    }
-
-    private fun getProgressStyle(stage: Int, segments: List<Int>): Notification.ProgressStyle {
-        val progressStyle = Notification.ProgressStyle()
-            .setStyledByProgress(false)
-            .setProgressStartIcon(Icon.createWithResource(applicationContext, R.drawable.ic_flight_takeoff))
-            .setProgressEndIcon(Icon.createWithResource(applicationContext, R.drawable.ic_flight_land))
-
-        val blue = "#1E88E5".toColorInt()
-        val clear = Color.TRANSPARENT
-        val green = "#4CAF50".toColorInt()
-        val yellow = "#FFB300".toColorInt()
-
-        // Active progress equals total cumulative percentage of active and completed segments
-        val activeProgress = segments.take(stage).sum()
-        progressStyle.setProgress(activeProgress)
-
-        // Maps each of the 5 segments to its respective state color:
-        // Completed = Blue, Active = Yellow (or Green on touchdown), Future = Clear
-        val segmentList = segments.mapIndexed { index, weight ->
-            val color = when {
-                index < stage - 1 -> blue
-                index == stage - 1 -> if (stage == 5) green else yellow
-                else -> clear
-            }
-            Notification.ProgressStyle.Segment(weight).setColor(color)
-        }
-
-        return progressStyle.setProgressSegments(segmentList)
+        FlightNotificationRenderer.show(this, route, arrival, distance, phaseLabel, stage, segments)
     }
 }

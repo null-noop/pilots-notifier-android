@@ -15,7 +15,11 @@
     <string name="setting_fcm_token_title">FCM Registration Token</string>
     <string name="token_available">Available · Tap to copy or register</string>
     <string name="setting_test_notify_title">Send Test Notification</string>
-    <string name="setting_test_notify_subtitle">Trigger sample flight status notification</string>
+    <string name="setting_test_notify_subtitle">Preview all five flight notification stages</string>
+    <string name="setting_restore_notify_title">Restore Flight Notification</string>
+    <string name="setting_restore_notify_subtitle">Repost the latest flight status from the server</string>
+    <string name="restore_notify_unavailable">No flight notification has been received yet</string>
+    <string name="restore_notify_posted">Latest flight notification restored</string>
     <string name="dialog_save">Save</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="url_saved">Server URL updated</string>
