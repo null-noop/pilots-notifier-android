@@ -14,6 +14,7 @@ object FlightNotificationRenderer {
     private const val CHANNEL_SILENT_ID = "flight_tracker_silent"
     private const val CHANNEL_ALERT_ID = "flight_tracker_alerts"
     private const val NOTIFICATION_ID = 1001
+    private const val PHOTO_NOTIFICATION_ID = 1002
 
     private data class TestStage(
         val label: String,
@@ -27,7 +28,9 @@ object FlightNotificationRenderer {
         distance: Int,
         phaseLabel: CharSequence,
         stage: Int,
-        segments: List<Int>
+        segments: List<Int>,
+        photoPos: Int? = null,
+        detail: String? = null
     ) {
         createNotificationChannels(context)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -38,6 +41,7 @@ object FlightNotificationRenderer {
         val contentTitle = if (isCanceled) "$route (Canceled)" else "$route ($arrival)"
         val contentText = when {
             isCanceled -> "Trip canceled"
+            !detail.isNullOrBlank() -> detail
             isLanded -> "Landed safely"
             distance > 0 -> "En Route - $distance nm"
             else -> "En Route"
@@ -58,7 +62,7 @@ object FlightNotificationRenderer {
         }
 
         if (android.os.Build.VERSION.SDK_INT >= 35) {
-            builder.setStyle(getProgressStyle(context, stage, segments, isCanceled))
+            builder.setStyle(getProgressStyle(context, stage, segments, isCanceled, photoPos))
         } else {
             builder.setProgress(100, segments.take(stage).sum(), false)
         }
@@ -113,7 +117,8 @@ object FlightNotificationRenderer {
         context: Context,
         stage: Int,
         segments: List<Int>,
-        isCanceled: Boolean
+        isCanceled: Boolean,
+        photoPos: Int?
     ): Notification.ProgressStyle {
         val progressStyle = Notification.ProgressStyle()
             .setStyledByProgress(false)
@@ -137,6 +142,24 @@ object FlightNotificationRenderer {
             Notification.ProgressStyle.Segment(weight).setColor(color)
         }
 
+        if (photoPos != null && !isCanceled) {
+            progressStyle.setProgressPoints(
+                listOf(Notification.ProgressStyle.Point(photoPos.coerceIn(0, 100)).setColor(Color.WHITE))
+            )
+        }
+
         return progressStyle.setProgressSegments(segmentList)
+    }
+
+    fun showPhotoAlert(context: Context, title: CharSequence, message: CharSequence) {
+        createNotificationChannels(context)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = Notification.Builder(context, CHANNEL_ALERT_ID)
+            .setSmallIcon(R.drawable.ic_airplane_ticket)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(PHOTO_NOTIFICATION_ID, notification)
     }
 }

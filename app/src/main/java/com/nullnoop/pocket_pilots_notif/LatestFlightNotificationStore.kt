@@ -8,7 +8,9 @@ data class FlightNotificationData(
     val distance: Int,
     val phaseLabel: String,
     val stage: Int,
-    val segments: List<Int>
+    val segments: List<Int>,
+    val photoPos: Int? = null,
+    val detail: String? = null
 )
 
 object LatestFlightNotificationStore {
@@ -19,6 +21,8 @@ object LatestFlightNotificationStore {
     private const val KEY_PHASE_LABEL = "phase_label"
     private const val KEY_STAGE = "stage"
     private const val KEY_SEGMENTS = "segments"
+    private const val KEY_PHOTO_POS = "photo_pos"
+    private const val KEY_DETAIL = "detail"
 
     fun save(context: Context, notification: FlightNotificationData) {
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -29,6 +33,8 @@ object LatestFlightNotificationStore {
             .putString(KEY_PHASE_LABEL, notification.phaseLabel)
             .putInt(KEY_STAGE, notification.stage)
             .putString(KEY_SEGMENTS, notification.segments.joinToString(","))
+            .putInt(KEY_PHOTO_POS, notification.photoPos ?: -1)
+            .putString(KEY_DETAIL, notification.detail)
             .apply()
     }
 
@@ -50,7 +56,9 @@ object LatestFlightNotificationStore {
             distance = preferences.getInt(KEY_DISTANCE, 0),
             phaseLabel = phaseLabel,
             stage = stage,
-            segments = segments
+            segments = segments,
+            photoPos = preferences.getInt(KEY_PHOTO_POS, -1).takeIf { it >= 0 },
+            detail = preferences.getString(KEY_DETAIL, null)
         )
     }
 }

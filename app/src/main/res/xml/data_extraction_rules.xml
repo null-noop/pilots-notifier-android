@@ -5,9 +5,9 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="pocket_pilots_settings.xml" />
+        <include domain="sharedpref" path="pocket_pilots_settings.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="pocket_pilots_settings.xml" />
+        <include domain="sharedpref" path="pocket_pilots_settings.xml" />
     </device-transfer>
 </data-extraction-rules>

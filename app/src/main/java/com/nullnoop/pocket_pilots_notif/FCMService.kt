@@ -37,6 +37,14 @@ class FCMService : FirebaseMessagingService() {
         try {
             val data = remoteMessage.data
             if (data.isNotEmpty()) {
+                if (data["event"] == "photo") {
+                    FlightNotificationRenderer.showPhotoAlert(
+                        this,
+                        data["title"] ?: "Photo spot ahead",
+                        data["message"] ?: ""
+                    )
+                    return
+                }
                 val route = data["route"] ?: extractRouteFromTitle(data["title"]) ?: "SFO ➔ JFK"
                 val arrival = extractArrival(data) ?: "Arrived"
                 val distance = extractDistance(data) ?: 0
@@ -51,11 +59,14 @@ class FCMService : FirebaseMessagingService() {
                     ?.takeIf { it.size == 5 }
                     ?: listOf(5, 22, 46, 22, 5) // Default 5-stage allocation fallback
 
+                val photoPos = data["photo_pos"]?.toIntOrNull()
+                val detail = data["detail"]
+
                 LatestFlightNotificationStore.save(
                     this,
-                    FlightNotificationData(route.toString(), arrival, distance, phaseLabel, stage, segments)
+                    FlightNotificationData(route.toString(), arrival, distance, phaseLabel, stage, segments, photoPos, detail)
                 )
-                sendStyledNotification(route, arrival, distance, phaseLabel, stage, segments)
+                sendStyledNotification(route, arrival, distance, phaseLabel, stage, segments, photoPos, detail)
                 Log.d(TAG, "Notification successfully posted to NotificationManager")
             }
         } catch (e: Exception) {
@@ -161,8 +172,10 @@ class FCMService : FirebaseMessagingService() {
         distance: Int,
         phaseLabel: CharSequence,
         stage: Int,
-        segments: List<Int>
+        segments: List<Int>,
+        photoPos: Int?,
+        detail: String?
     ) {
-        FlightNotificationRenderer.show(this, route, arrival, distance, phaseLabel, stage, segments)
+        FlightNotificationRenderer.show(this, route, arrival, distance, phaseLabel, stage, segments, photoPos, detail)
     }
 }

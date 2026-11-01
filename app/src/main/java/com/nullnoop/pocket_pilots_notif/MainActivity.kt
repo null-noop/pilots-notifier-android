@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun formatPairCode(code: String): String = code.chunked(4).joinToString("-")
+    private fun formatPairCode(code: String): String = code.chunked(6).joinToString("-")
 
     private fun checkServerStatus() {
         if (isCheckingStatus) {
@@ -301,7 +301,9 @@ class MainActivity : AppCompatActivity() {
             distance = notification.distance,
             phaseLabel = notification.phaseLabel,
             stage = notification.stage,
-            segments = notification.segments
+            segments = notification.segments,
+            photoPos = notification.photoPos,
+            detail = notification.detail
         )
         Toast.makeText(this, R.string.restore_notify_posted, Toast.LENGTH_SHORT).show()
     }
