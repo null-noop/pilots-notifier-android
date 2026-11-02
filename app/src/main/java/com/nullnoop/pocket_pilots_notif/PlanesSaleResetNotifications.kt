@@ -210,6 +210,30 @@ object WorldEventsResetNotifications {
 class PlanesSaleResetReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                if (
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED ||
+                    !NotificationManagerCompat.from(context).areNotificationsEnabled()
+                ) {
+                    return
+                }
+
+                val notification = LatestFlightNotificationStore.load(context) ?: return
+                FlightNotificationRenderer.show(
+                    context = context,
+                    route = notification.route,
+                    arrival = notification.arrival,
+                    distance = notification.distance,
+                    phaseLabel = notification.phaseLabel,
+                    stage = notification.stage,
+                    segments = notification.segments,
+                    photoPos = notification.photoPos,
+                    detail = notification.detail
+                )
+            }
             Intent.ACTION_BOOT_COMPLETED -> {
                 PlanesSaleResetNotifications.scheduleNextReset(context)
                 WorldEventsResetNotifications.scheduleNextReset(context)
