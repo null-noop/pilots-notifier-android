@@ -21,6 +21,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.messaging.FirebaseMessaging
 
@@ -69,6 +70,8 @@ class MainActivity : AppCompatActivity() {
         val cardFcmToken = findViewById<MaterialCardView>(R.id.cardFcmToken)
         val cardTestNotify = findViewById<MaterialCardView>(R.id.cardTestNotify)
         val cardRestoreNotify = findViewById<MaterialCardView>(R.id.cardRestoreNotify)
+        val switchPlanesResetNotify = findViewById<MaterialSwitch>(R.id.switchPlanesResetNotify)
+        val switchWorldEventsResetNotify = findViewById<MaterialSwitch>(R.id.switchWorldEventsResetNotify)
 
         // 3. Dynamically apply top padding to topAppBar for status bar & camera cutout
         ViewCompat.setOnApplyWindowInsetsListener(topAppBar) { v, insets ->
@@ -115,6 +118,21 @@ class MainActivity : AppCompatActivity() {
         cardRestoreNotify.setOnClickListener {
             Log.d(TAG, "Restore Flight Notification card clicked by user")
             restoreLatestFlightNotification()
+        }
+
+        switchPlanesResetNotify.isChecked = PlanesSaleResetNotifications.isEnabled(this)
+        switchPlanesResetNotify.setOnCheckedChangeListener { _, enabled ->
+            PlanesSaleResetNotifications.setEnabled(this, enabled)
+        }
+        if (switchPlanesResetNotify.isChecked) {
+            PlanesSaleResetNotifications.scheduleNextReset(this)
+        }
+        switchWorldEventsResetNotify.isChecked = WorldEventsResetNotifications.isEnabled(this)
+        switchWorldEventsResetNotify.setOnCheckedChangeListener { _, enabled ->
+            WorldEventsResetNotifications.setEnabled(this, enabled)
+        }
+        if (switchWorldEventsResetNotify.isChecked) {
+            WorldEventsResetNotifications.scheduleNextReset(this)
         }
 
         // Request notification permissions for Android 13+

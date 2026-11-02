@@ -15,7 +15,7 @@ class ServerSettingsManager(context: Context) {
         }
 
     var pairCode: String?
-        get() = prefs.getString(KEY_PAIR_CODE, null)
+        get() = prefs.getString(KEY_PAIR_CODE, null)?.takeIf { it.length == PAIR_CODE_LENGTH }
         set(value) {
             prefs.edit().apply {
                 if (value.isNullOrBlank()) remove(KEY_PAIR_CODE)
@@ -37,6 +37,7 @@ class ServerSettingsManager(context: Context) {
         const val KEY_SERVER_URL = "remote_server_url"
         private const val KEY_PAIR_CODE = "pair_code"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val PAIR_CODE_LENGTH = 18
         const val DEFAULT_SERVER_URL = "https://pilots-api.nullnoop.dev"
     }
 }

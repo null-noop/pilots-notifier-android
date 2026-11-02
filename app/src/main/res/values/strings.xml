@@ -18,6 +18,16 @@
     <string name="setting_test_notify_subtitle">Preview all five flight notification stages</string>
     <string name="setting_restore_notify_title">Restore Flight Notification</string>
     <string name="setting_restore_notify_subtitle">Repost the latest flight status from the server</string>
+    <string name="setting_planes_reset_notify_title">Planes for Sale Reset</string>
+    <string name="setting_planes_reset_notify_subtitle">Notify at midnight UTC when the shop refreshes</string>
+    <string name="planes_reset_notification_title">Planes for Sale Reset</string>
+    <string name="planes_reset_notification_message">The planes for sale shop has refreshed.</string>
+    <string name="setting_world_events_reset_notify_title">World Events Reset</string>
+    <string name="setting_world_events_reset_notify_subtitle">Notify 24 hours before and at the Monday UTC reset</string>
+    <string name="world_events_reset_notification_title">World Events Reset</string>
+    <string name="world_events_reset_notification_message">World events and airport holdings have reset.</string>
+    <string name="world_events_announcement_notification_title">New World Event Tomorrow</string>
+    <string name="world_events_announcement_notification_message">A new world event starts in 24 hours.</string>
     <string name="restore_notify_unavailable">No flight notification has been received yet</string>
     <string name="restore_notify_posted">Latest flight notification restored</string>
     <string name="dialog_save">Save</string>
