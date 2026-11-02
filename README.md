@@ -7,6 +7,10 @@ Android app that pairs with the notification API, registers an FCM device token,
 - [Notification API](https://github.com/null-noop/pilots-notifier-server)
 - [Chrome extension](https://github.com/null-noop/pilots-notifier-extension)
 
+## Compatibility
+
+Release versions in the `vX.X.0` format are compatible when the API, extension, and Android app share the same version.
+
 ## Firebase Setup
 
 Place the Firebase project's Android config at `app/google-services.json`. The Android app ID is `com.nullnoop.pocket_pilots_notif`. For actual push delivery, the notification API also needs a Firebase Admin service-account key from the same Firebase project.

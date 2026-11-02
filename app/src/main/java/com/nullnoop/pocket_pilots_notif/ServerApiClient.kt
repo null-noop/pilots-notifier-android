@@ -23,15 +23,19 @@ data class TokenRegistrationResponse(
 
 class ServerApiClient(private val baseUrl: String) {
 
-    private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun formatUrl(endpoint: String): String {
         val cleanBase = baseUrl.trim().trimEnd('/')
         val formattedBase = if (!cleanBase.startsWith("http://") && !cleanBase.startsWith("https://")) {
-            "http://$cleanBase"
+            "https://$cleanBase"
         } else {
             cleanBase
+        }
+        val parsedBase = URL(formattedBase)
+        val isLoopbackHost = parsedBase.host.lowercase() in setOf("localhost", "127.0.0.1", "[::1]")
+        if (parsedBase.protocol != "https" && !(BuildConfig.DEBUG && parsedBase.protocol == "http" && isLoopbackHost)) {
+            throw IllegalArgumentException("Use HTTPS for the server URL. HTTP is allowed only for loopback debug servers.")
         }
         val cleanEndpoint = if (endpoint.startsWith("/")) endpoint else "/$endpoint"
         return "$formattedBase$cleanEndpoint"
@@ -66,10 +70,11 @@ class ServerApiClient(private val baseUrl: String) {
         callback: ((Result<TokenRegistrationResponse>) -> Unit)? = null
     ) {
         executor.execute {
-            val urlString = formatUrl("/register-token")
+            var urlString = baseUrl
             Log.i(TAG, "========================================")
-            Log.i(TAG, "--> POST $urlString")
             try {
+                urlString = formatUrl("/register-token")
+                Log.i(TAG, "--> POST $urlString")
                 val url = URL(urlString)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
@@ -140,10 +145,11 @@ class ServerApiClient(private val baseUrl: String) {
 
     fun checkStatus(pairCode: String?, callback: (Result<ServerStatusResponse>) -> Unit) {
         executor.execute {
-            val urlString = formatUrl("/status")
+            var urlString = baseUrl
             Log.i(TAG, "========================================")
-            Log.i(TAG, "--> GET $urlString")
             try {
+                urlString = formatUrl("/status")
+                Log.i(TAG, "--> GET $urlString")
                 val url = URL(urlString)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
@@ -196,5 +202,6 @@ class ServerApiClient(private val baseUrl: String) {
 
     companion object {
         private const val TAG = "ServerApiClient"
+        private val executor = Executors.newSingleThreadExecutor()
     }
 }
